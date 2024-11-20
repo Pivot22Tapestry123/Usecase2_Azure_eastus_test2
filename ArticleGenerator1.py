@@ -6,8 +6,6 @@ import json
 import warnings
 from crewai import Agent, Task, Crew, Process
 import openai
-from azure.identity import DefaultAzureCredential
-from azure.keyvault.secrets import SecretClient
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
