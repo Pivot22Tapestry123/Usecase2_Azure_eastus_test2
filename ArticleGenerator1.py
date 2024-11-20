@@ -6,9 +6,38 @@ import json
 import warnings
 from crewai import Agent, Task, Crew, Process
 import openai
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
+
+# Configure Azure authentication
+def get_azure_credentials():
+    try:
+        # First try to get credentials from environment variables
+        azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        if azure_api_key:
+            return azure_api_key
+        
+        # If not in environment variables, try Azure Key Vault
+        key_vault_name = os.getenv("AZURE_KEY_VAULT_NAME")
+        if key_vault_name:
+            key_vault_uri = f"https://{key_vault_name}.vault.azure.net/"
+            credential = DefaultAzureCredential()
+            secret_client = SecretClient(vault_url=key_vault_uri, credential=credential)
+            azure_api_key = secret_client.get_secret("AZURE-OPENAI-API-KEY").value
+            return azure_api_key
+        
+        # If neither is available, return None
+        return None
+    except Exception as e:
+        st.error(f"Error getting Azure credentials: {str(e)}")
+        return None
 
 # Helper function to load and save configurations
 def load_config():
@@ -32,12 +61,18 @@ st.title("Research Article Generator")
 uploaded_file = st.file_uploader("Upload your transcript file", type="txt")
 st.write(uploaded_file)
 
-# API Key and endpoint inputs for Azure OpenAI
-azure_api_key = st.text_input("Enter your Azure OpenAI API Key", type="password")
-azure_api_key = azure_api_key.strip() if azure_api_key else ""
-azure_endpoint = st.text_input("Enter your Azure OpenAI Endpoint", value="https://rstapestryopenai2.openai.azure.com/")
-azure_deployment = st.text_input("Enter your Azure OpenAI Deployment Name", value="gpt-4")
-azure_api_version = st.text_input("Enter Azure API Version", value="2024-02-15-preview")
+# Try to get Azure credentials
+azure_api_key = get_azure_credentials()
+
+# Only show API key input if not available from Azure authentication
+if not azure_api_key:
+    azure_api_key = st.text_input("Enter your Azure OpenAI API Key", type="password")
+    azure_api_key = azure_api_key.strip() if azure_api_key else ""
+
+# Get other Azure configurations from environment variables or UI
+azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "https://rstapestryopenai2.openai.azure.com/")
+azure_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4")
+azure_api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
 
 # Configure OpenAI settings
 def setup_azure_openai():
