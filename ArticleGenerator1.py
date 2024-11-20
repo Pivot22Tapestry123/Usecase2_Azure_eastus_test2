@@ -5,14 +5,12 @@ import os
 import json
 import warnings
 from crewai import Agent, Task, Crew, Process
-from crewai import LLM
 import openai
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
 
 # Helper function to load and save configurations
-llm = LLM(model="gpt-4", temperature=0.7)
 def load_config():
     try:
         with open("agent_task_config.json", "r") as f:
@@ -35,18 +33,18 @@ uploaded_file = st.file_uploader("Upload your transcript file", type="txt")
 st.write(uploaded_file)
 
 # API Key and endpoint inputs for Azure OpenAI
-AZURE_API_KEY = st.text_input("Enter your Azure OpenAI API Key", type="password")
-AZURE_API_KEY = AZURE_API_KEY.strip()
-AZURE_API_BASE = "https://rstapestryopenai2.openai.azure.com/"
+azure_api_key = st.text_input("Enter your Azure OpenAI API Key", type="password")
+azure_api_key = azure_api_key.strip()
+azure_endpoint = "https://rstapestryopenai2.openai.azure.com/"
 azure_deployment = "gpt-4"  # Deployment name as per your Azure configuration
-AZURE_API_VERSION = "2024-08-01-preview"
+azure_api_version = "2024-08-01-preview"
 
 # Set OpenAI API base and key for Azure
-openai.api_key = AZURE_API_KEY
-openai.api_base = AZURE_API_BASE
+openai.api_key = azure_api_key
+openai.api_base = azure_endpoint
 
 # Set the OPENAI_API_KEY environment variable for libraries expecting it this way
-os.environ["OPENAI_API_KEY"] = AZURE_API_KEY
+os.environ["OPENAI_API_KEY"] = azure_api_key
 
 # Temperature slider
 temperature = st.slider("Set the temperature for the output (0 = deterministic, 1 = creative)", min_value=0.0, max_value=1.0, value=0.7)
@@ -93,9 +91,9 @@ if st.button("Generate Research Article"):
         try:
             # Test Azure OpenAI API connection with a small completion request
             response = requests.post(
-                f"{AZURE_API_BASE}openai/deployments/{azure_deployment}/chat/completions?api-version={AZURE_API_VERSION}",
+                f"{azure_endpoint}openai/deployments/{azure_deployment}/chat/completions?api-version={azure_api_version}",
                 headers={
-                    "api-key": AZURE_API_KEY,
+                    "api-key": azure_api_key,
                     "Content-Type": "application/json"
                 },
                 json={
@@ -113,8 +111,7 @@ if st.button("Generate Research Article"):
                 backstory=st.session_state['prompts']['planner']['backstory'],
                 allow_delegation=False,
                 verbose=True,
-                temperature=temperature,
-                llm=llm 
+                temperature=temperature
             )
 
             writer = Agent(
@@ -123,8 +120,7 @@ if st.button("Generate Research Article"):
                 backstory=st.session_state['prompts']['writer']['backstory'],
                 allow_delegation=False,
                 verbose=True,
-                temperature=temperature,
-                llm=llm 
+                temperature=temperature
             )
 
             editor = Agent(
@@ -133,8 +129,7 @@ if st.button("Generate Research Article"):
                 backstory=st.session_state['prompts']['editor']['backstory'],
                 allow_delegation=False,
                 verbose=True,
-                temperature=temperature,
-                llm=llm 
+                temperature=temperature
             )
 
             # Define tasks
